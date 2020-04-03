@@ -4,7 +4,8 @@ import datetime
 from random import uniform
 
 import matplotlib.pyplot as plt
-from math import sin, cos, pi, exp
+from math import sin, cos, pi
+
 
 def decor(func):
     def wrapper(*args):
@@ -61,12 +62,13 @@ def DFT(x_n):
     return [sum((x_n[k] * iexp(-2 * pi * i * k / len(x_n)) for k in range(len(x_n)))) for i in range(len(x_n))]
 
 
+@decor
 def FFT(n):
     l = len(n)
     if l <= 1:
         return n
-    even = FFT(n[0::2])
-    odd = FFT(n[1::2])
+    even, t1 = FFT(n[0::2])
+    odd, t2 = FFT(n[1::2])
     t = [iexp(-2 * pi * i / l) * odd[i] for i in range(l // 2)]
     return [even[i] + t[i] for i in range(l // 2)] + [even[i] - t[i] for i in range(l // 2)]
 
@@ -79,10 +81,21 @@ def get_imaginary(arr):
     return [i.imag for i in arr]
 
 
+def generate_table(n):
+    return [[iexp(-2 * pi * i * j / n) for j in range(n)] for i in range(n)]
+
+
+@decor
+def DFT_table(x_n, table):
+    return [sum((x_n[k] * table[k][i]) for k in range(len(x_n))) for i in range(len(x_n))]
+
+
 def main():
     harmonics_number = 12
     lim_freq = 2400
-    ticks_number = 1024
+    ticks_number = 2048
+
+    koef_table = generate_table(ticks_number)
 
     x_list, g_res = generate_signal(ticks_number, lim_freq, harmonics_number)
     y_list, g2_res = generate_signal(ticks_number, lim_freq, harmonics_number)
@@ -96,15 +109,19 @@ def main():
 
     print(print_data)
 
-    cor1_list, cor1_list_t = correlate(x_list, y_list, ticks_number)
-    cor2_list, cor2_list_t = correlate(x_list, x_list, ticks_number)
-
-    print_data += "Correlation\nx_list, y_list: {0}\nx_list, x_list: {1}" \
-        .format(cor1_list_t, cor2_list_t)
+    # cor1_list, cor1_list_t = correlate(x_list, y_list, ticks_number)
+    # cor2_list, cor2_list_t = correlate(x_list, x_list, ticks_number)
+    #
+    # print_data += "Correlation\nx_list, y_list: {0}\nx_list, x_list: {1}" \
+    #     .format(cor1_list_t, cor2_list_t)
 
     dft_res = DFT(x_list)
 
-    fft_res = FFT(x_list)
+    dft_table_res, dft_table_time = DFT_table(x_list, koef_table)
+
+    fft_res, fft_time = FFT(x_list)
+
+    print('DFT "table" method executes with {}s\nFFT executes with {}s'.format(dft_table_time, fft_time))
 
     plt.subplot(221)
     plt.ylabel('DFT')
